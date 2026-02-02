@@ -1,0 +1,15 @@
+# Python environment
+venv/
+__pycache__/
+*.py[cod]
+
+# Sensitive Data
+.env
+
+# AI Models & Audio (Usually too large for Git)
+*.ppn
+*.pt
+src/audio/*.wav
+
+# IDE Settings
+.vscode/
