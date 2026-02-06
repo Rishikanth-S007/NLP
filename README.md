@@ -1,31 +1,50 @@
-Aether: Surgical Voice Assistant (NLP Engine)
-This repository contains the Natural Language Processing (NLP) module for Aether, a multimodal surgical interface designed to assist healthcare professionals. The system enables hands-free control of 3D medical visualizations, allowing surgeons to manipulate digital models without breaking sterile field protocols.
+Nova: A Multi-Modal Control Interface
+Integrating Voice Intelligence and Spatial Computer Vision
+
+Nova is a multi-modal interface designed to facilitate hands-free interaction with digital environments. By combining Natural Language Processing for vocal commands and high-fidelity skeletal tracking for hand gestures, this system provides a seamless way to navigate 3D models and complex datasets without traditional input devices.
 
 Core Capabilities
-The NLP module is built to provide low-latency, reliable performance in a clinical environment through three primary layers:
+Spatial Gesture Engine
+The gesture recognition system is built on a skeletal tracking architecture that translates hand movements into specific system actions:
 
-Wake Word Detection: Utilizes a custom-trained model for the trigger word "Aether," optimized for high accuracy in environments with background noise.
+Dynamic Manipulation: Use a pinch gesture to zoom in and out or hold a pinch to rotate 3D objects along their axis.
 
-Local Transcription: Employs the Faster-Whisper (tiny.en) model for real-time, offline speech-to-text processing, ensuring patient data privacy by keeping audio processing local.
+Navigation: A two-finger vertical movement (Index and Middle fingers) enables scrolling through data or layers.
 
-Surgical Command Logic: A robust mapping system using regular expressions to interpret various medical and directional terminologies into actionable system commands.
+Control Commands: Rapid horizontal movements trigger swipes to switch between files, while a full palm extension resets the environment to its default state.
 
-Communication Bridge: A centralized FastAPI server acts as the project's hub, broadcasting interpreted commands to the Computer Vision (CV) and User Interface (UI) modules.
+Data Capture: A specific pinky-extension gesture triggers an instantaneous system screenshot, which is saved locally for review.
 
-Installation and Setup
-To deploy this module within the Aether ecosystem, follow these steps:
+Voice Intelligence
+The NLP component allows for the execution of system-level commands through speech. This ensures that the user can switch modes, query data, or trigger complex workflows while their hands are occupied with spatial tasks.
 
-Clone the Repository: git clone https://github.com/Rishikanth-S007/NLP.git
+System Architecture
+The project is structured into distinct modules to ensure scalability and ease of integration:
 
-Configure Environment Variables: Create a .env file in the root directory and add your Picovoice API Key: PICOVOICE_API_KEY=your_key_here
+Engine: Contains the core skeletal tracking logic that processes camera frames into coordinate data.
 
-Install Dependencies: Ensure your virtual environment is active, then run: pip install -r requirements.txt
+Logic: The mathematical layer that interprets coordinate changes as specific human gestures.
 
-Add Custom Models: Place the platform-specific aether.ppn wake-word file into the src/models/ directory.
+Bridge: A FastAPI-based server that acts as the communication layer, transmitting gestures from Python to the visual interface.
 
-Integration Architecture
-The system operates as a distributed service. Other modules (CV and UI) can interact with the NLP engine through the following local API endpoints:
+Frontend: A web-based 3D visualizer built with Three.js that provides real-time feedback for all interactions.
 
-POST /command: The voice engine sends detected actions and full transcripts to this endpoint.
+Source: Contains the primary execution scripts for both the gesture engine and the communication bridge.
 
-GET /status: Returns the most recent system action and transcript, allowing other modules to synchronize their state with user intent.
+Installation and Execution
+Environment Configuration: Initialize a virtual environment and install the necessary dependencies:
+
+Bash
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+System Launch: To run the full suite, execute the following components in separate terminal instances:
+
+Communication Bridge: python src/bridge_server.py
+
+Gesture Engine: python src/gesture_main.py
+
+Interface Access: Open frontend/index.html in a web browser to view the 3D environment and begin spatial interaction.
+
+Project Vision
+Nova was developed to address the need for sterile, hands-free control in environments such as medical imaging suites and engineering laboratories. The goal is to reduce the friction between user intent and software response, creating a more intuitive relationship between the human and the machine.
