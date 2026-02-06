@@ -33,9 +33,9 @@ def main():
     transcriber = AetherTranscriber()
     
     # 2. Setup Wake Word
-    model_path = os.path.join("src", "models", "aether.ppn") 
+    model_path = os.path.join("src", "models", "nova.ppn") 
     try:
-        keyword_name = "AETHER"
+        keyword_name = "NOVA"
         handle = pvporcupine.create(
             access_key=PICO_KEY, 
             keyword_paths=[model_path],

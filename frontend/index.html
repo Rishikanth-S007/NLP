@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nova 3D View</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { margin: 0; background: #050505; color: white; font-family: sans-serif; overflow: hidden; }
+        #status { position: absolute; top: 20px; left: 20px; font-size: 24px; color: #00ff00; }
+    </style>
+</head>
+<body>
+    <div id="status">Waiting for Nova Engine...</div>
+    <script>
+        // 1. Setup Three.js Scene
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 2. Add a 3D Object (A "Surgical" Block)
+        const geometry = new THREE.BoxGeometry(2, 2, 2);
+        const material = new THREE.MeshPhongMaterial({ color: 0x0077ff, wireframe: false });
+        const cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 5, 5).normalize();
+        scene.add(light);
+        camera.position.z = 5;
+
+        // 3. The Logic Loop: Listen to the Bridge Server
+        async function fetchGesture() {
+            try {
+                const response = await fetch('http://localhost:8000/get_action');
+                const data = await response.json();
+                const action = data.action;
+
+                if(action !== "IDLE") {
+                    document.getElementById('status').innerText = "GESTURE: " + action;
+                    
+                    if(action === "ACTION_ROTATE") cube.rotation.y += 0.05;
+                    if(action === "ACTION_ZOOM_IN") camera.position.z -= 0.2;
+                    if(action === "ACTION_ZOOM_OUT") camera.position.z += 0.2;
+                    if(action === "ACTION_SWIPE_LEFT") cube.position.x -= 1;
+                    if(action === "ACTION_SWIPE_RIGHT") cube.position.x += 1;
+                    if(action === "ACTION_RESET") {
+                        cube.position.set(0,0,0);
+                        camera.position.z = 5;
+                    }
+                }
+            } catch (e) {}
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            fetchGesture();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
