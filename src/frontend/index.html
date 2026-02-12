@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova | Surgical Spatial HUD</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <div id="threejs-container"></div>
+
+    <div class="hud-wrapper">
+        
+        <header class="system-status">
+            <div class="status-pill active">NOVA SPATIAL: ACTIVE</div>
+            <div class="profile-info">DR. ANAND | OR-4</div>
+        </header>
+
+        <aside class="vitals-panel">
+            <div class="vital-card">
+                <span class="label">HEART RATE</span>
+                <div class="value">98 <small>BPM</small></div>
+                <div class="mini-graph" id="hr-graph"></div>
+            </div>
+            <div class="vital-card warning">
+                <span class="label">OXYGEN</span>
+                <div class="value">94 <small>%</small></div>
+            </div>
+        </aside>
+
+        <section class="log-panel">
+            <h3>ACTION LOG</h3>
+            <div id="log-container" class="monospaced-text">
+                <div class="log-entry"><span class="cyan">[SYSTEM]</span> HAND DETECTED...</div>
+            </div>
+        </section>
+
+        <footer class="controls-footer">
+            <div class="voice-module">
+                <div class="waveform"></div>
+                <p id="voice-transcript">"Waiting for command..."</p>
+            </div>
+            <div class="gesture-key">
+                <div class="g-icon" id="pinch-icon">PINCH</div>
+                <div class="g-icon" id="palm-icon">PALM</div>
+            </div>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -5,6 +5,8 @@ import numpy as np
 from dotenv import load_dotenv
 import pvporcupine
 from pvrecorder import PvRecorder
+
+# Updated imports to match the 'src' sub-folder structure
 from engine.transcriber import AetherTranscriber
 from logic.commands import CommandLogic
 
@@ -17,9 +19,9 @@ load_dotenv()
 PICO_KEY = os.getenv("PICOVOICE_API_KEY")
 
 def send_action_to_team(action, transcript):
-    """Sends the command to the central Aether Server."""
+    """Sends the command to the unified Bridge Server."""
+    # This now talks to the single bridge_server.py you just created
     url = "http://localhost:8000/command"
-    # Note: 'source' helps the team know this came from YOU (Voice)
     data = {"action": action, "text": transcript}
     try:
         requests.post(url, json=data, timeout=0.2)
@@ -32,8 +34,9 @@ def main():
     logic = CommandLogic()
     transcriber = AetherTranscriber()
     
-    # 2. Setup Wake Word
-    model_path = os.path.join("src", "models", "nova.ppn") 
+    # 2. Setup Wake Word - Updated path to match NEWPRJ/src/models/
+    model_path = os.path.join(os.path.dirname(__file__), "models", "nova.ppn") 
+    
     try:
         keyword_name = "NOVA"
         handle = pvporcupine.create(
@@ -42,14 +45,14 @@ def main():
             sensitivities=[0.7]
         )
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Error loading wake word model at {model_path}: {e}")
         return
 
     # 3. Setup Audio Recorder
     recorder = PvRecorder(device_index=-1, frame_length=handle.frame_length)
     
-    print(f"\n--- AETHER SYSTEM ACTIVE ---")
-    print(f"Connected to Hub: http://localhost:8000")
+    print(f"\n--- NOVA SURGICAL SYSTEM ACTIVE ---")
+    print(f"Connected to Bridge: http://localhost:8000")
     print(f"Say '{keyword_name}'...")
 
     try:
@@ -62,7 +65,7 @@ def main():
                 print(f"\n✨ Wake Word Detected!")
                 recorder.stop()
                 
-                # Capture 1.5 seconds of command audio (Faster response)
+                # Capture 3 seconds of command audio
                 command_frames = []
                 temp_recorder = PvRecorder(device_index=-1, frame_length=512)
                 temp_recorder.start()
@@ -82,14 +85,14 @@ def main():
                     print(f"🗣️ Transcribed: '{text}'")
                     print(f"🚀 SYSTEM ACTION: {action}")
                     
-                    # --- THE CONNECTION STEP ---
+                    # Send to the unified Bridge Server
                     send_action_to_team(action, text)
-                    print(f"📡 Sent to Hub!")
+                    print(f"📡 Sent to Bridge!")
 
                 recorder.start()
 
     except KeyboardInterrupt:
-        print("\nStopping Aether...")
+        print("\nStopping Nova System...")
     finally:
         if 'recorder' in locals():
             recorder.stop()
