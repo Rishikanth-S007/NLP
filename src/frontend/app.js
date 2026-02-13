@@ -1,102 +1,112 @@
-// 1. --- CONFIGURATION & STATE ---
-const SERVER_URL = "http://localhost:8000/status";
+// --- CONFIGURATION ---
+const BRIDGE_URL = "http://127.0.0.1:8000";
 const logContainer = document.getElementById('log-container');
-const voiceTranscript = document.getElementById('voice-transcript');
-const pinchIcon = document.getElementById('pinch-icon');
+let lastAction = "IDLE";
 
-// 2. --- HUB SYNCHRONIZATION (POLLING) ---
-async function fetchSystemStatus() {
-    try {
-        const response = await fetch(SERVER_URL);
-        const data = await response.json();
-
-        // Update Voice Display
-        if (data.last_transcript) {
-            voiceTranscript.innerText = `"${data.last_transcript}"`;
-        }
-
-        // Update Action Log on new Trigger
-        if (data.action !== "IDLE" && data.action !== "NONE") {
-            updateActionLog(data.action);
-        }
-
-        // Visual Feedback for Gestures
-        updateGestureUI(data.action);
-
-        // Optional: Link 3D Rotation to specific gestures
-        handle3DRotation(data.action);
-
-    } catch (error) {
-        console.error("Connection to Bridge Server failed. Ensure main.py is running.");
-    }
-}
-
-function updateActionLog(action) {
-    const entry = document.createElement('div');
-    entry.className = "log-entry";
-    const timestamp = new Date().toLocaleTimeString([], { hour12: false });
-    
-    // Styling matches your Figma design
-    entry.innerHTML = `<span class="gray">[${timestamp}]</span> <span class="lime">[TRIGGER]</span> ${action}`;
-    
-    logContainer.prepend(entry);
-    if (logContainer.children.length > 10) logContainer.removeChild(logContainer.lastChild);
-}
-
-function updateGestureUI(action) {
-    if(action === "PINCH") {
-        pinchIcon.style.backgroundColor = "var(--cyan)";
-        pinchIcon.style.boxShadow = "0 0 15px var(--cyan)";
-    } else {
-        pinchIcon.style.backgroundColor = "transparent";
-        pinchIcon.style.boxShadow = "none";
-    }
-}
-
-// 3. --- THREE.JS 3D ENGINE ---
+// --- 1. THREE.JS SCENE SETUP (Surgical Model) ---
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
 document.getElementById('threejs-container').appendChild(renderer.domElement);
 
-// Setup Lighting for Medical Models
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-scene.add(ambientLight);
-const pointLight = new THREE.PointLight(0x00f2ff, 1);
-pointLight.position.set(5, 5, 5);
-scene.add(pointLight);
-
-// Placeholder Object (Replace with GLTFLoader for your heart.glb)
-const geometry = new THREE.IcosahedronGeometry(2, 1);
-const material = new THREE.MeshBasicMaterial({ 
-    color: 0x00f2ff, 
+// Create a placeholder surgical model (A Low-Poly Octahedron)
+const geometry = new THREE.OctahedronGeometry(1, 0);
+const material = new THREE.MeshPhongMaterial({
+    color: 0x00f2ff,
     wireframe: true,
-    transparent: true,
-    opacity: 0.8
+    emissive: 0x004444
 });
-const medicalModel = new THREE.Mesh(geometry, material);
-scene.add(medicalModel);
+const surgicalModel = new THREE.Mesh(geometry, material);
+scene.add(surgicalModel);
 
-camera.position.z = 5;
+// Lighting
+const light = new THREE.PointLight(0xffffff, 1, 100);
+light.position.set(10, 10, 10);
+scene.add(light);
+scene.add(new THREE.AmbientLight(0x404040));
 
-// 4. --- ANIMATION & INTERACTION ---
-function handle3DRotation(action) {
-    // Example: Rotate the model based on specific gesture inputs
-    if (action === "ROTATE_LEFT") medicalModel.rotation.y -= 0.05;
-    if (action === "ROTATE_RIGHT") medicalModel.rotation.y += 0.05;
-    if (action === "ZOOM_IN") camera.position.z -= 0.1;
-    if (action === "ZOOM_OUT") camera.position.z += 0.1;
+camera.position.z = 3;
+
+// --- 2. GESTURE INTERPRETER (The Bridge) ---
+async function pollGestures() {
+    try {
+        const response = await fetch(`${BRIDGE_URL}/status`);
+        const data = await response.json();
+        const action = data.action;
+        const text = data.text;
+        const source = data.source;
+
+        // If we have a voice command with text, we might want to log it specifically
+        if (source === "voice" && text && action !== lastAction) {
+            console.log(`Voice: ${text}`);
+        }
+
+        if (action !== "IDLE") {
+            handleAction(action, text);
+        }
+    } catch (err) {
+        console.warn("Waiting for Bridge Server...");
+    }
 }
 
+function handleAction(action, text = "") {
+    // 3D Model Manipulations
+    switch (action) {
+        case "ACTION_ROTATE":
+            surgicalModel.rotation.y += 0.05;
+            break;
+        case "ACTION_ZOOM_IN":
+            surgicalModel.scale.multiplyScalar(1.05);
+            break;
+        case "ACTION_ZOOM_OUT":
+            surgicalModel.scale.multiplyScalar(0.95);
+            break;
+        case "ACTION_RESET":
+            surgicalModel.rotation.set(0, 0, 0);
+            surgicalModel.scale.set(1, 1, 1);
+            break;
+    }
+
+    // UI Log Update (Only log if the action changed)
+    if (action !== lastAction) {
+        addLogEntry(action, text);
+        lastAction = action;
+    }
+}
+
+function addLogEntry(msg, text = "") {
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    const time = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // Clean up text (e.g., ACTION_ZOOM_IN -> ZOOM IN)
+    const cleanMsg = msg.replace('ACTION_', '').replace('_', ' ');
+
+    let finalHtml = `<span class="cyan">[${time}]</span> ${cleanMsg}`;
+    if (text) {
+        finalHtml += ` <small style="color: #aaa">"${text}"</small>`;
+    }
+
+    entry.innerHTML = finalHtml;
+    logContainer.prepend(entry);
+
+    // Keep the log clean
+    if (logContainer.children.length > 8) {
+        logContainer.removeChild(logContainer.lastChild);
+    }
+}
+
+// --- 3. ANIMATION LOOPS ---
 function animate() {
     requestAnimationFrame(animate);
-    
-    // Constant subtle rotation for "Live" effect
-    medicalModel.rotation.y += 0.002;
-    
+
+    // Subtle auto-rotation when idle
+    if (lastAction === "IDLE") {
+        surgicalModel.rotation.y += 0.005;
+    }
+
     renderer.render(scene, camera);
 }
 
@@ -107,6 +117,16 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// 5. --- START SYSTEM ---
+// Initialization
 animate();
-setInterval(fetchSystemStatus, 100); // Poll server every 100ms
+setInterval(pollGestures, 100); // Poll every 100ms for responsiveness
+
+// --- 4. SIMULATED VITALS ---
+setInterval(() => {
+    const hrValue = document.querySelector('.vital-card .value');
+    if (hrValue) {
+        let currentHR = parseInt(hrValue.innerText);
+        let variance = Math.floor(Math.random() * 3) - 1;
+        hrValue.innerHTML = `${currentHR + variance} <small>BPM</small>`;
+    }
+}, 2000);

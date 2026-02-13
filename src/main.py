@@ -1,104 +1,116 @@
-import requests 
-import os
-import struct
-import numpy as np
+import requests, os, sys, numpy as np
 from dotenv import load_dotenv
 import pvporcupine
 from pvrecorder import PvRecorder
+import traceback
+import msvcrt
 
-# Updated imports to match the 'src' sub-folder structure
+# Ensure Python finds the subfolders
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from engine.transcriber import AetherTranscriber
 from logic.commands import CommandLogic
 
-# Suppress warnings
-os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
-os.environ["PYTHONWARNINGS"] = "ignore"
-
-# Load API Key
 load_dotenv()
 PICO_KEY = os.getenv("PICOVOICE_API_KEY")
 
-def send_action_to_team(action, transcript):
-    """Sends the command to the unified Bridge Server."""
-    # This now talks to the single bridge_server.py you just created
-    url = "http://localhost:8000/command"
-    data = {"action": action, "text": transcript}
+def send_to_bridge(action, transcript):
     try:
-        requests.post(url, json=data, timeout=0.2)
-    except:
-        # Hub is likely not running
-        pass
+        payload = {
+            "action": action, 
+            "text": transcript,
+            "source": "voice"
+        }
+        requests.post("http://localhost:8000/command", json=payload, timeout=0.2)
+        print(f"📡 Sent to HUD: {action}")
+    except: pass
 
 def main():
-    # 1. Initialize System Components
-    logic = CommandLogic()
-    transcriber = AetherTranscriber()
-    
-    # 2. Setup Wake Word - Updated path to match NEWPRJ/src/models/
-    model_path = os.path.join(os.path.dirname(__file__), "models", "nova.ppn") 
-    
-    try:
-        keyword_name = "NOVA"
-        handle = pvporcupine.create(
-            access_key=PICO_KEY, 
-            keyword_paths=[model_path],
-            sensitivities=[0.7]
-        )
-    except Exception as e:
-        print(f"❌ Error loading wake word model at {model_path}: {e}")
+    if not PICO_KEY:
+        print("ERROR: PICOVOICE_API_KEY is missing in .env")
         return
 
-    # 3. Setup Audio Recorder
-    recorder = PvRecorder(device_index=-1, frame_length=handle.frame_length)
+    logic = CommandLogic()
+    transcriber = AetherTranscriber()
+    model_path = os.path.join(os.path.dirname(__file__), "models", "helix.ppn") 
     
-    print(f"\n--- NOVA SURGICAL SYSTEM ACTIVE ---")
-    print(f"Connected to Bridge: http://localhost:8000")
-    print(f"Say '{keyword_name}'...")
+    if not os.path.exists(model_path):
+        print(f"ERROR: Model not found at {model_path}")
+        return
 
     try:
-        recorder.start()
+        # Reverting to 'NOVA'
+        handle = pvporcupine.create(access_key=PICO_KEY, keyword_paths=[model_path], sensitivities=[0.8])
+        # handle = pvporcupine.create(access_key=PICO_KEY, keywords=['jarvis'], sensitivities=[0.6])
+    except Exception as e:
+        print(f"ERROR: Failed to create Porcupine handle: {e}")
+        raise
+
+    recorder = PvRecorder(device_index=-1, frame_length=handle.frame_length)
+    
+    print("\n--- VOICE SYSTEM ACTIVE (Say 'HELIX' or press SPACEBAR) ---")
+    print(f"Using Audio Device: {recorder.selected_device}")
+    print("Listening... (Volume Bar: | means silent, # means loud)")
+
+    recorder.start()
+
+    try:
         while True:
             pcm = recorder.read()
-            result = handle.process(pcm)
             
-            if result >= 0:
-                print(f"\n✨ Wake Word Detected!")
+            # --- DEBUG: Audio Level Meter ---
+            # Calculate RMS (Root Mean Square) amplitude
+            rms = np.sqrt(np.mean(np.array(pcm)**2))
+            bar_len = int(rms / 100)
+            
+            if bar_len > 100:
+                print(f"[{'#' * 20}] ⚠️ MAX VOLUME / CLIPPING DETECTED!", end='\r')
+            else:
+                print(f"[{'#' * bar_len:<20}]", end='\r')
+            # --------------------------------
+
+            # Check for Spacebar Manual Trigger
+            manual_trigger = False
+            if msvcrt.kbhit():
+                if msvcrt.getch() == b' ':
+                    manual_trigger = True
+
+            if handle.process(pcm) >= 0 or manual_trigger:
+                print("\n✨ Wake Word Detected (or Manual Trigger)!")
                 recorder.stop()
                 
-                # Capture 3 seconds of command audio
-                command_frames = []
-                temp_recorder = PvRecorder(device_index=-1, frame_length=512)
-                temp_recorder.start()
-                for _ in range(0, int(16000 / 512 * 3)): 
-                    command_frames.extend(temp_recorder.read())
-                temp_recorder.stop()
-                temp_recorder.delete()
+                # Simple 3-second capture
+                frames = []
+                temp = PvRecorder(device_index=-1, frame_length=512)
+                temp.start()
+                for _ in range(93): frames.extend(temp.read())
+                temp.stop(); temp.delete()
                 
-                # Process Audio
-                audio_np = np.array(command_frames).astype(np.float32) / 32768.0
-                text = transcriber.transcribe_audio(audio_np)
+                text = transcriber.transcribe_audio(np.array(frames).astype(np.float32) / 32768.0)
+                print(f"\n📝 Heard: '{text}'")
                 
-                if len(text.strip()) < 2:
-                    print("🔇 (Silence detected)")
-                else:
+                if len(text.strip()) > 1:
                     action = logic.get_action(text)
-                    print(f"🗣️ Transcribed: '{text}'")
-                    print(f"🚀 SYSTEM ACTION: {action}")
-                    
-                    # Send to the unified Bridge Server
-                    send_action_to_team(action, text)
-                    print(f"📡 Sent to Bridge!")
-
+                    print(f"🧠 Logic: {action}")
+                    send_to_bridge(action, text)
+                else:
+                    print("❌ No speech detected.")
+                
                 recorder.start()
-
     except KeyboardInterrupt:
-        print("\nStopping Nova System...")
-    finally:
-        if 'recorder' in locals():
-            recorder.stop()
-            recorder.delete()
-        if 'handle' in locals():
-            handle.delete()
+        recorder.stop()
+    except Exception as e:
+        print(f"ERROR inside loop: {e}")
+        raise
 
 if __name__ == "__main__":
-    main()
+    try:
+        print("Available Audio Devices:")
+        for i, device in enumerate(PvRecorder.get_available_devices()):
+            print(f"[{i}] {device}")
+        main()
+    except Exception as e:
+        print("CRITICAL ERROR:")
+        traceback.print_exc()
+        # Keep window open if crashed
+        while True:
+            pass

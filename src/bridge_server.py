@@ -1,11 +1,12 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-import uvicorn
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+from pydantic import BaseModel
+import time
 
 app = FastAPI()
 
-# Allow the browser to talk to this server
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -13,41 +14,48 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Unified state for the UI to "pull" from
-current_state = {
-    "action": "IDLE",
-    "last_transcript": "Waiting for command...",
-    "system_status": "ONLINE"
-}
+# Shared State
+class SystemState:
+    def __init__(self):
+        self.last_action = "IDLE"
+        self.last_text = ""
+        self.timestamp = 0
+        self.source = ""
+
+state = SystemState()
 
 class Command(BaseModel):
     action: str
-    text: str = "" # Default to empty if not provided
+    text: str = ""
+    source: str = "unknown"
 
-@app.get("/")
-def read_root():
-    return {"message": "Nova Surgical Hub is Active"}
-
-# Endpoint for both Gesture and Voice logic to send data
-@app.post("/command")
-async def receive_command(cmd: Command):
-    current_state["action"] = cmd.action
-    if cmd.text:
-        current_state["last_transcript"] = cmd.text
-    print(f"📢 Hub received: {cmd.action} | {cmd.text}")
-    return {"status": "ok"}
-
-# The UI Lead (app.js) calls this to update your Figma design
 @app.get("/status")
 async def get_status():
-    action = current_state["action"]
+    """Frontend polls this to get the latest state."""
+    # Auto-reset after 2s
+    age = time.time() - state.timestamp
+    if age > 2.0:
+        state.last_action = "IDLE"
+        state.last_text = ""
+        state.source = ""
     
-    # After the browser reads a "one-time" trigger, reset it
-    triggers = ["TRIGGER", "SWIPE", "CAPTURE", "MEASURE"]
-    if any(t in action for t in triggers):
-        current_state["action"] = "IDLE"
-        
-    return current_state
+    return {
+        "action": state.last_action,
+        "text": state.last_text,
+        "source": state.source,
+        "age": age
+    }
+
+@app.post("/command")
+async def receive_command(cmd: Command):
+    """Voice and Gesture engines push data here."""
+    state.last_action = cmd.action
+    state.last_text = cmd.text
+    state.source = cmd.source
+    state.timestamp = time.time()
+    
+    print(f"[{cmd.source.upper()}] Cmd: {cmd.action} | Text: {cmd.text}")
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
