@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 from pydantic import BaseModel
 import time
@@ -13,6 +14,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve Frontend UI
+app.mount("/ui", StaticFiles(directory="src/frontend", html=True), name="ui")
 
 # Shared State
 class SystemState:

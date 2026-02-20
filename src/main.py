@@ -76,6 +76,7 @@ def main():
 
             if handle.process(pcm) >= 0 or manual_trigger:
                 print("\n✨ Wake Word Detected (or Manual Trigger)!")
+                send_to_bridge("STATUS_HEARING", "Awaiting command...")
                 recorder.stop()
                 
                 # Simple 3-second capture

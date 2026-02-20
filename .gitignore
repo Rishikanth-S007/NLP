@@ -12,4 +12,5 @@ __pycache__/
 src/audio/*.wav
 
 # IDE Settings
-.vscode/
+# Test Files
+src/test_gestures_logic.py
