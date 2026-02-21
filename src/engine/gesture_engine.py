@@ -3,7 +3,7 @@ import mediapipe as mp
 from mediapipe.python.solutions import hands as mp_hands
 from mediapipe.python.solutions import drawing_utils as mp_draw
 
-class AetherGestureEngine:
+class HelixGestureEngine:
     def __init__(self):
         self.mp_hands = mp_hands
         self.mp_draw = mp_draw

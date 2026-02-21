@@ -1,7 +1,7 @@
-Nova: A Multi-Modal Control Interface
+Helix: A Multi-Modal Control Interface
 Integrating Voice Intelligence and Spatial Computer Vision
 
-Nova is a multi-modal interface designed to facilitate hands-free interaction with digital environments. By combining Natural Language Processing for vocal commands and high-fidelity skeletal tracking for hand gestures, this system provides a seamless way to navigate 3D models and complex datasets without traditional input devices.
+Helix is a multi-modal interface designed to facilitate hands-free interaction with digital environments. By combining Natural Language Processing for vocal commands and high-fidelity skeletal tracking for hand gestures, this system provides a seamless way to navigate 3D models and complex datasets without traditional input devices.
 
 Core Capabilities
 Spatial Gesture Engine
@@ -47,4 +47,4 @@ Gesture Engine: python src/gesture_main.py
 Interface Access: Open frontend/index.html in a web browser to view the 3D environment and begin spatial interaction.
 
 Project Vision
-Nova was developed to address the need for sterile, hands-free control in environments such as medical imaging suites and engineering laboratories. The goal is to reduce the friction between user intent and software response, creating a more intuitive relationship between the human and the machine.
+Helix was developed to address the need for sterile, hands-free control in environments such as medical imaging suites and engineering laboratories. The goal is to reduce the friction between user intent and software response, creating a more intuitive relationship between the human and the machine.

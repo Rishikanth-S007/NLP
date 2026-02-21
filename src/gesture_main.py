@@ -1,10 +1,10 @@
 import cv2, requests, time, os
 import pyautogui
-from engine.gesture_engine import AetherGestureEngine
+from engine.gesture_engine import HelixGestureEngine
 from logic.gestures import GestureRecognizer
 
 def main():
-    engine = AetherGestureEngine()
+    engine = HelixGestureEngine()
     recognizer = GestureRecognizer()
     cap = cv2.VideoCapture(0)
     last_stream_time = 0
@@ -39,7 +39,7 @@ def main():
                             if not os.path.exists("captures"):
                                 os.makedirs("captures")
                             timestamp = time.strftime("%H%M%S")
-                            filename = f"captures/nova_{timestamp}.jpg"
+                            filename = f"captures/helix_{timestamp}.jpg"
                             
                             # Taking a system-wide screenshot instead of camera frame
                             pyautogui.screenshot(filename)
@@ -48,7 +48,7 @@ def main():
                         print(f"Capture error: {e}")
 
         cv2.putText(frame, f"HUD ACTION: {current_action}", (20, 40), 2, 0.8, (0,255,0), 2)
-        cv2.imshow("Nova Gesture Engine", frame)
+        cv2.imshow("Helix Gesture Engine", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'): break
 
     cap.release()

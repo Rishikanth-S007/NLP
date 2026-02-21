@@ -7,7 +7,7 @@ import msvcrt
 
 # Ensure Python finds the subfolders
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from engine.transcriber import AetherTranscriber
+from engine.transcriber import HelixTranscriber
 from logic.commands import CommandLogic
 
 load_dotenv()
@@ -30,7 +30,7 @@ def main():
         return
 
     logic = CommandLogic()
-    transcriber = AetherTranscriber()
+    transcriber = HelixTranscriber()
     model_path = os.path.join(os.path.dirname(__file__), "models", "helix.ppn") 
     
     if not os.path.exists(model_path):

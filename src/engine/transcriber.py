@@ -1,10 +1,10 @@
 from faster_whisper import WhisperModel
 import numpy as np
 
-class AetherTranscriber:
+class HelixTranscriber:
     def __init__(self, model_size="base.en"):
         # 'base.en' is more accurate than tiny.en but still fast.
-        print(f"--- Loading Aether Brain ({model_size}) ---")
+        print(f"--- Loading Helix Brain ({model_size}) ---")
         self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
     def transcribe_audio(self, audio_data):
