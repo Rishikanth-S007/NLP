@@ -9,10 +9,30 @@ def main():
     cap = cv2.VideoCapture(0)
     last_stream_time = 0
 
+    last_voice_timestamp = 0
     print("\n--- GESTURE SYSTEM ACTIVE ---")
 
     while True:
+        # 1. Poll Bridge for Voice-Triggered Capture
+        try:
+            r = requests.get("http://localhost:8000/status", timeout=0.05)
+            if r.status_code == 200:
+                data = r.json()
+                # If voice sent a capture command and we haven't processed it yet
+                if data["action"] == "ACTION_CAPTURE" and data["source"] == "voice" and data["timestamp"] > last_voice_timestamp:
+                    last_voice_timestamp = data["timestamp"]
+                    
+                    if not os.path.exists("captures"):
+                        os.makedirs("captures")
+                    timestamp = time.strftime("%H%M%S")
+                    filename = f"captures/helix_{timestamp}.jpg"
+                    pyautogui.screenshot(filename)
+                    print(f"📸 Voice-Triggered Screen captured: {filename}")
+        except: pass
+
+        # 2. Process Camera Frame for Gesture Logic
         success, frame = cap.read()
+
         if not success: break
         
         frame = cv2.flip(frame, 1)

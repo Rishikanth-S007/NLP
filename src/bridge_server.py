@@ -47,6 +47,7 @@ async def get_status():
         "action": state.last_action,
         "text": state.last_text,
         "source": state.source,
+        "timestamp": state.timestamp,
         "age": age
     }
 
